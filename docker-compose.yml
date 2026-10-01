@@ -1,0 +1,28 @@
+version: "3.9"
+
+# ── VaaniSetu – local all-in-one stack ──────────────────────────────────────
+#
+# Runs the entire backend in one container.  Models are loaded from your
+# existing HuggingFace cache — no re-download needed.
+#
+#   docker compose up --build
+#
+# The app (phones) connects to http://<your-PC-LAN-IP>:8000
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  vaanisetu:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Reuse models already downloaded on your host machine
+      - type: bind
+        source: ${USERPROFILE}/.cache/huggingface
+        target: /root/.cache/huggingface
+    environment:
+      HF_LOCAL_FILES_ONLY: "true"
+      STT_SERVICE_URL: "http://127.0.0.1:8001"
+      TTS_SERVICE_URL: "http://127.0.0.1:8002"
+      TRANSLATION_SERVICE_URL: "http://127.0.0.1:8004"
+    restart: unless-stopped

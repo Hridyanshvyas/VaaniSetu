@@ -1,0 +1,35 @@
+buildscript {
+    ext {
+        buildToolsVersion = "37.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 37
+        targetSdkVersion = 36
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.2.0"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"
+
+// Native dependencies may provide their own NDK default in gradle.properties.
+// Apply the app's pinned version after each Android subproject is evaluated so
+// all CMake builds use the same installed, known-good NDK.
+subprojects { subproject ->
+    def configureNdk = {
+        def androidExtension = subproject.extensions.findByName("android")
+        if (androidExtension != null) {
+            androidExtension.ndkVersion = rootProject.ext.ndkVersion
+        }
+    }
+    subproject.pluginManager.withPlugin("com.android.application", configureNdk)
+    subproject.pluginManager.withPlugin("com.android.library", configureNdk)
+}

@@ -1,0 +1,11 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+torch>=2.2
+transformers>=4.45
+accelerate>=1.14
+parler-tts @ git+https://github.com/huggingface/parler-tts.git
+soundfile>=0.12
+# Required by audiotools, a runtime dependency imported by parler-tts/DAC.
+randomname>=0.2.1
+# Required by descript-audio-codec, imported by Parler-TTS at synthesis time.
+argbind>=0.3.9

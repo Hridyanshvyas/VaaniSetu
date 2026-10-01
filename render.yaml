@@ -1,0 +1,38 @@
+# ── Render.com deployment config ─────────────────────────────────────────────
+#
+# Deploy steps:
+#   1. Push this repo to GitHub
+#   2. Go to https://render.com → New → Blueprint
+#   3. Connect your GitHub repo
+#   4. Render reads this file and deploys automatically
+#   5. You get a permanent URL like https://vaanisetu.onrender.com
+#
+# The free tier sleeps after 15 min of inactivity.
+# The "starter" plan ($7/month) stays always-on — recommended for demo day.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: vaanisetu
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Use at least 4GB RAM instance — models need it.
+    # "standard" = 2 CPU, 4 GB RAM ($25/month)
+    # "pro"      = 4 CPU, 8 GB RAM ($85/month)  ← recommended for all 4 langs
+    plan: standard
+    healthCheckPath: /health
+    envVars:
+      - key: HF_LOCAL_FILES_ONLY
+        value: "false"           # First boot downloads models from HuggingFace
+      - key: HF_TOKEN
+        sync: false              # Set this manually in Render dashboard (secret)
+      - key: STT_SERVICE_URL
+        value: "http://127.0.0.1:8001"
+      - key: TTS_SERVICE_URL
+        value: "http://127.0.0.1:8002"
+      - key: TRANSLATION_SERVICE_URL
+        value: "http://127.0.0.1:8004"
+    disk:
+      name: model-cache
+      mountPath: /root/.cache/huggingface
+      sizeGB: 50                 # Stores all downloaded models permanently

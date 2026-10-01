@@ -1,0 +1,77 @@
+# ──────────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.pytest-vaanisetu-tmp/
+.pytest_temp/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Secrets
+.env
+.env.*
+
+# ──────────────────────────────────────────────
+# IDE / editor
+# ──────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+.mplconfig/
+
+# ──────────────────────────────────────────────
+# OS
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ──────────────────────────────────────────────
+# Large test / demo artifacts (not source code)
+# ──────────────────────────────────────────────
+*.wav
+*.log
+result.json
+translate_test.json
+emulator-current.png
+
+# ──────────────────────────────────────────────
+# APKs / binaries (host on Releases page instead)
+# ──────────────────────────────────────────────
+*.apk
+*.apk.idsig
+*.aab
+
+# ──────────────────────────────────────────────
+# Node / React Native
+# ──────────────────────────────────────────────
+node_modules/
+.metro-health-check*
+
+# Android build outputs & caches
+frontend/android/.gradle/
+frontend/android/.gradle-user/
+frontend/android/.gradle-user-home/
+frontend/android/app/build/
+frontend/android/app/.cxx/
+frontend/android/build/
+frontend/android/local.properties
+frontend/.gradle-user-home/
+frontend/.bundle/
+
+# Kotlin / Gradle downloaded jars
+**/*.jar
+
+# iOS build outputs
+frontend/ios/build/
+frontend/ios/Pods/
+frontend/ios/Podfile.lock
+frontend/.expo/

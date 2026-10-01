@@ -1,0 +1,5 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+torch>=2.2
+transformers>=4.45,<5.0
+IndicTransToolkit>=1.1.1
