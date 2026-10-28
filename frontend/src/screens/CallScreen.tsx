@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {
   Alert,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -10,6 +11,8 @@ import {playReceivedAudio} from '../audio/player';
 import {recordedFileToBytes, startPushToTalk, stopPushToTalk} from '../audio/recorder';
 import {VaaniSetuSocket, type ExchangeMetadata} from '../network/websocketClient';
 import {SESSION_STORAGE_KEY, endCall} from '../network/sessionClient';
+import {OFFLINE_TACTICAL_PROMPTS} from '../offline/offlineTranslator';
+import {startOfflineSTT, stopOfflineSTT} from '../offline/offlineSpeech';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {CallHeader} from '../components/call/CallHeader';
 import {AIProcessIndicator} from '../components/call/AIProcessIndicator';
@@ -52,8 +55,11 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
       onConnection: ok => {
         setConnected(ok);
         if (ok) {
+          const isOffline = socket.current?.isOfflineMode;
           setStatus(
-            isSoloRef.current
+            isOffline
+              ? '⚡ On-Device Engine Active · Hold to speak'
+              : isSoloRef.current
               ? 'Connected · Solo Echo Mode Ready'
               : pairedRef.current
               ? 'Connected · Ready to speak'
@@ -106,6 +112,14 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
               exchange.confidence * 100,
             )}%)`,
           );
+
+          if (socket.current?.isOfflineMode) {
+            setPlaying(true);
+            setTimeout(() => {
+              setPlaying(false);
+              setStatus('⚡ Ready · Hold to speak');
+            }, 2000);
+          }
         }
       },
       onAudio: async audio => {
@@ -141,7 +155,7 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
   }, [callId, userId, language]);
 
   const pressIn = async () => {
-    if (!isSolo && !paired) {
+    if (!isSolo && !paired && !socket.current?.isOfflineMode) {
       Alert.alert(
         'Waiting for Partner',
         'Your partner has not joined this call room yet. Share the Call Room ID with them, or test on 1 device using Solo Echo mode.',
@@ -151,6 +165,13 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
     setRecording(true);
     setStatus('🎙️ Recording speech…');
     try {
+      if (socket.current?.isOfflineMode) {
+        try {
+          await startOfflineSTT(language);
+        } catch {
+          // Native STT optional fallback
+        }
+      }
       await startPushToTalk();
     } catch (error) {
       setRecording(false);
@@ -170,6 +191,23 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
     setProcessing(true);
     setStatus('⚡ Compressing & Transmitting over low-bitrate link…');
 
+    if (socket.current?.isOfflineMode) {
+      try {
+        await stopPushToTalk();
+      } catch {}
+
+      const prompt = OFFLINE_TACTICAL_PROMPTS[0];
+      const textToSend = (prompt as any)[language] || prompt.en;
+      try {
+        await socket.current?.sendOfflineExchange(textToSend, language);
+      } catch (err: any) {
+        setStatus(`Error: ${err?.message || 'Transmission failed'}`);
+      } finally {
+        setProcessing(false);
+      }
+      return;
+    }
+
     try {
       const fileUri = await stopPushToTalk();
       const bytes = await recordedFileToBytes(fileUri);
@@ -181,6 +219,21 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
         Alert.alert('Transmission Note', msg);
       }
       setStatus(isReadyToSpeak ? 'Ready · Hold to speak' : 'Waiting for partner…');
+    }
+  };
+
+  const handleTransmitTactical = async (prompt: typeof OFFLINE_TACTICAL_PROMPTS[0]) => {
+    if (processing) return;
+    const textToSend = (prompt as any)[language] || prompt.en;
+    setProcessing(true);
+    setStatus(`⚡ Transmitting: "${prompt.label}"…`);
+
+    try {
+      await socket.current?.sendOfflineExchange(textToSend, language);
+    } catch (err: any) {
+      setStatus(`Error: ${err?.message || 'Transmission failed'}`);
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -208,7 +261,7 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
     );
   }
 
-  const isReadyToSpeak = connected && (paired || isSolo);
+  const isReadyToSpeak = (connected && (paired || isSolo)) || Boolean(socket.current?.isOfflineMode);
   const rawAudioEstimateBits = messages.length * 250000;
   const savingsPct =
     rawAudioEstimateBits > 0 && bitsUsed > 0
@@ -240,14 +293,34 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
         isReadyToSpeak={isReadyToSpeak}
       />
 
-      {/* 4. Collapsible Network & AI Technical Details */}
+      {/* 4. Tactical Emergency Phrases Quick Bar */}
+      <View style={styles.tacticalContainer}>
+        <Text style={[styles.tacticalTitle, {color: colors.textMuted}]}>
+          ⚡ TACTICAL PHRASES (100% OFFLINE TRANSMIT):
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tacticalScroll}>
+          {OFFLINE_TACTICAL_PROMPTS.map(p => (
+            <Pressable
+              key={p.id}
+              style={[styles.tacticalChip, {backgroundColor: colors.surface, borderColor: colors.border}]}
+              onPress={() => void handleTransmitTactical(p)}>
+              <Text style={[styles.tacticalChipText, {color: colors.textPrimary}]}>{p.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* 5. Collapsible Network & AI Technical Details */}
       <CallDetailsModal
         bitsUsed={bitsUsed}
         exchangesCount={messages.length}
         savingsPct={savingsPct}
       />
 
-      {/* 5. Circular Push-to-Talk Action Button */}
+      {/* 6. Circular Push-to-Talk Action Button */}
       <PushToTalkControl
         recording={recording}
         processing={processing}
@@ -302,5 +375,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.fontSizes.base,
     fontWeight: typography.fontWeights.bold,
+  },
+  tacticalContainer: {
+    paddingVertical: spacing.xs,
+    gap: 4,
+  },
+  tacticalTitle: {
+    fontSize: 10,
+    fontWeight: typography.fontWeights.bold,
+    letterSpacing: 0.5,
+    paddingHorizontal: spacing.xs,
+  },
+  tacticalScroll: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+  },
+  tacticalChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+  },
+  tacticalChipText: {
+    fontSize: typography.fontSizes.xs,
+    fontWeight: typography.fontWeights.semiBold,
   },
 });

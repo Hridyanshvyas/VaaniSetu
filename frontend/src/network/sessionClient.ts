@@ -15,6 +15,14 @@ export async function registerSession({
   nativeLanguage,
 }: SessionRegistration): Promise<{paired: boolean}> {
   const httpUrl = getBackendHttpUrl();
+  if (httpUrl === 'offline') {
+    await AsyncStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({userId, callId, nativeLanguage}),
+    );
+    return {paired: true};
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 6000);
 
@@ -67,6 +75,9 @@ export async function registerSession({
 export async function endCall(callId: string): Promise<void> {
   try {
     const httpUrl = getBackendHttpUrl();
+    if (httpUrl === 'offline') {
+      return;
+    }
     await fetch(`${httpUrl}/sessions/${encodeURIComponent(callId)}`, {
       method: 'DELETE',
     });

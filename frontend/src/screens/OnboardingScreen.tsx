@@ -164,10 +164,11 @@ export function OnboardingScreen({onRegistered}: Props) {
       const msg = error instanceof Error ? error.message : 'Registration failed.';
       Alert.alert(
         'Connection Failed',
-        `${msg}\n\n• Target Host: ${serverHost}\n• Tip: Ensure backend server is running and phone is connected to the same Wi-Fi, Hotspot, or network.`,
+        `${msg}\n\n• Target Host: ${serverHost}\n• Tip: Switch to Offline Engine for 100% on-device standalone operation without any server.`,
         [
+          {text: '⚡ Use Offline Engine', onPress: () => void handleSelectPreset('offline')},
           {text: 'Retry Ping', onPress: () => void pingServer(serverHost)},
-          {text: 'OK'},
+          {text: 'Cancel', style: 'cancel'},
         ],
       );
     } finally {
@@ -196,6 +197,8 @@ export function OnboardingScreen({onRegistered}: Props) {
           onRetry={() => void pingServer(serverHost)}
           isRetrying={checkingPing}
           onOpenAdvanced={scrollToSettings}
+          isOfflineEngine={serverHost === 'offline'}
+          onSwitchToOffline={() => void handleSelectPreset('offline')}
         />
 
         {/* 3. HERO SECTION — Start Voice Bridge */}

@@ -64,12 +64,76 @@ If Person A speaks **Hindi** and Person B has their app set to **Tamil**, VaaniS
 
 ---
 
+---
+
+## 🔄 Dual Operational Workflows
+
+VaaniSetu operates in two distinct modes depending on infrastructure availability:
+
+### Workflow 1: ⚡ 100% On-Device Offline Engine (Zero Server, Zero Internet)
+Designed for extreme disaster zones where no laptop or server exists. The phone runs the complete pipeline locally:
+
+```
+[ Sender Speaks ] 
+       ↓ 
+[ 1. Android On-Device STT ] (Native Android SpeechRecognizer)
+       ↓ (Devanagari text)
+[ 2. Offline Indic Translator ] (Local tactical lexicon & emergency phrase engine)
+       ↓ (Tamil / Telugu / English text)
+[ 3. Zlib Compression ] (Level 9 deflate in TypeScript/pako)
+       ↓
+[ 4. Binary Wire Packet Framing ] ([1B lang_len][lang_tag][4B payload_len][payload])
+       ↓
+[ 5. Reed-Solomon FEC (RS-10) ] (GF(2^8) Berlekamp-Massey + Chien Search in TypeScript)
+       ↓
+[ 6. Simulated Radio Link ] (1200 bps throttle, 0.1% BER bit noise, 80ms latency)
+       ↓
+[ 7. RS-10 Error Recovery ] (Recovers up to 5 corrupted bytes in real-time)
+       ↓
+[ 8. Zlib Decompression & Unframing ]
+       ↓
+[ 9. Android Native TTS ] (Local TextToSpeech engine speaks fluently in target language)
+       ↓
+[ Receiver Hears Natural Voice ]
+```
+
+* Features a **Tactical Emergency Phrases Quick Bar** for one-tap mission-critical messages (`🚨 Medical Emergency`, `🌊 Flood Alert`, `🚁 Rescue Squad`).
+
+---
+
+### Workflow 2: 📡 Server-Assisted / Two-Device Mode (Hotspot, LAN, or Cloud)
+Designed for team field deployments with a local host or cloud server:
+
+```
+Phone A (Sender) ──── Push-to-Talk Audio (WAV) ────► FastAPI Orchestrator (:8000)
+                                                               │
+┌──────────────────────────────────────────────────────────────┘
+▼
+1. Speech-to-Text (:8001)        — AI4Bharat IndicConformer / Whisper
+2. Machine Translation (:8004)   — AI4Bharat IndicTrans2 1B (Hindi ↔ Tamil/Telugu/English)
+3. Channel Encoding              — Zlib compression + Reed-Solomon FEC
+4. Low-Bitrate Link Simulation   — 300 - 2400 bps throttled carrier with bit error rate
+5. Channel Decoding & Recovery   — RS parity recovery + decompression
+6. Text-to-Speech (:8002)        — Indic Parler-TTS / Edge Neural TTS
+▲
+└──────────────────────────────────────────────────────────────┐
+                                                               │
+Phone B (Receiver) ◄──── Synthesized Audio (WAV) ──────────────┘
+```
+
+* **No Router Needed**: Phone A turns on a Mobile Hotspot → Phone B connects to it → zero internet needed.
+
+---
+
 ## 🏗️ Architecture & Repository Layout
 
-VaaniSetu is built as a modular, decoupled microservice stack with a cross-platform mobile frontend:
+VaaniSetu is built as a modular, decoupled microservice stack with an offline-capable cross-platform mobile frontend:
 
 ```
 VaaniSetu/
+├── .github/workflows/        # CI/CD pipeline
+│   └── ci.yml                # Automated GitHub Actions running 22 pytest + 7 Jest tests
+│
 ├── backend/                  # FastAPI & WebSocket session orchestration server (:8000)
 │   ├── main.py               # REST API (/health, /sessions/register) & WebSocket handler
 │   ├── orchestrator.py       # End-to-end pipeline wiring STT -> Translation -> Channel -> TTS
@@ -94,17 +158,26 @@ VaaniSetu/
 │       ├── app.py            # FastAPI /synthesize endpoint (returns 16kHz mono WAV)
 │       └── model.py          # Ultra-fast neural voice synthesis + Indic Parler-TTS fallback
 │
-├── frontend/                 # React Native mobile application for Android & iOS
+├── frontend/                 # React Native mobile application for Android
 │   ├── src/
+│   │   ├── offline/          # ⚡ On-Device Offline Engine
+│   │   │   ├── offlineChannel.ts     # Pure TypeScript GF(2^8) Reed-Solomon, Zlib & SimulatedLink
+│   │   │   ├── offlineTranslator.ts  # On-device Indic translation & emergency lexicon
+│   │   │   ├── offlineSpeech.ts      # Native bridge for Android STT & TTS
+│   │   │   └── offlinePipeline.ts    # Complete standalone offline exchange orchestrator
 │   │   ├── audio/            # Audio capture (recorder.ts) and playback (player.ts)
 │   │   ├── network/          # WebSocket client (websocketClient.ts) & session manager
-│   │   ├── screens/          # CallScreen (PTT, live bitrate metrics) & OnboardingScreen
-│   │   ├── components/       # PipelineVisualizer, MetricsCard, LanguageSelector, etc.
-│   │   └── config.ts         # Server presets (Hotspot, Wi-Fi LAN, Emulator, Cloud)
-│   ├── android/              # Native Android build configuration & Gradle scripts
+│   │   ├── screens/          # CallScreen (PTT, tactical phrases, live metrics) & OnboardingScreen
+│   │   ├── components/       # PipelineVisualizer, MetricsCard, LanguageSelector, CompactConnection
+│   │   └── config.ts         # Server presets (⚡ Offline Engine, Hotspot, Wi-Fi LAN, Cloud)
+│   ├── android/              # Native Android build & Kotlin modules
+│   │   └── app/src/main/java/.../
+│   │       ├── OfflineSpeechModule.kt   # Native Android SpeechRecognizer & TextToSpeech module
+│   │       └── OfflineSpeechPackage.kt  # React Native package registration
+│   ├── __tests__/            # Jest unit tests for offline channel & RS-FEC
 │   └── package.json          # React Native dependencies
 │
-├── tests/                    # Comprehensive unit and integration test suite
+├── tests/                    # Comprehensive Python test suite (22 tests)
 │   ├── test_channel_roundtrip.py       # Bit budget, compression & RS error correction
 │   ├── test_stt_service.py             # STT contract, language checkpoints & normalization
 │   ├── test_translation_service.py     # Translation pairs & IndicTrans2 models
@@ -201,21 +274,41 @@ adb install VaaniSetu-final.apk
 
 ## 🧪 Running the Test Suite
 
-The repository includes a comprehensive 22-test automated test suite covering all layers:
+The repository includes **29 automated tests** covering both the Python microservice backend and the React Native offline channel layer:
 
+### 1. Python Backend & Channel Tests (22 Tests)
 ```bash
-# Run all tests
+# Run backend pytest suite
 python -m pytest tests/ -v
 ```
 
-All 22 tests pass:
-- `test_clean_channel_recovers_exactly` — Verifies flawless compression/decompression and FEC round-trip.
-- `test_noisy_channel_either_recovers_or_fails_gracefully` — Verifies Reed-Solomon correction under bit noise and graceful failure when corruptions exceed parity limits.
+All 22 Python tests pass:
+- `test_clean_channel_recovers_exactly` — Verifies compression/decompression & RS FEC round-trip.
+- `test_noisy_channel_either_recovers_or_fails_gracefully` — Verifies Reed-Solomon correction under bit noise and graceful failure when corruption exceeds parity limit.
 - `test_bitrate_counter_tracks_actual_bits` — Confirms real bit budget (<800 bits per sentence).
 - `test_transcribe_returns_standalone_contract` — STT validation.
 - `test_translate_returns_target_language_text` — Multilingual translation validation.
 - `test_synthesize_returns_wav_bytes_for_hindi` — Speech synthesis validation.
 - `test_websocket_relays_audio_in_receiver_native_language` — End-to-end WebSocket round-trip.
+
+### 2. Frontend Offline Channel Tests (7 Tests)
+```bash
+# Run Jest suite in frontend directory
+cd frontend
+npm test
+```
+
+All 7 Jest tests pass:
+- UTF-8 encoding/decoding for Devanagari, Tamil, Telugu Unicode characters.
+- Lossless Zlib compression and decompression matching wire format.
+- Binary wire packet packing & unpacking.
+- TypeScript Reed-Solomon GF(2^8) error correction under bit corruption.
+- Graceful failure when corruption exceeds RS-10 parity limit (>5 byte corruptions).
+- Multi-lingual tactical phrase dictionary lookups.
+- End-to-end offline pipeline round-trip tracking actual bit budget.
+
+### 3. Continuous Integration
+All 29 tests run automatically on every pull request and push to `main` via [GitHub Actions CI](.github/workflows/ci.yml).
 
 ---
 

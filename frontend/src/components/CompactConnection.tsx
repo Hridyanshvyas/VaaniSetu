@@ -7,6 +7,8 @@ type Props = {
   onRetry: () => void;
   isRetrying: boolean;
   onOpenAdvanced: () => void;
+  isOfflineEngine?: boolean;
+  onSwitchToOffline?: () => void;
 };
 
 export function CompactConnection({
@@ -14,25 +16,33 @@ export function CompactConnection({
   onRetry,
   isRetrying,
   onOpenAdvanced,
+  isOfflineEngine = false,
+  onSwitchToOffline,
 }: Props) {
   const {colors} = useTheme();
 
   const isOnline = status === 'online';
   const isOffline = status === 'offline';
 
-  const dotColor = isOnline
+  const dotColor = isOfflineEngine
+    ? colors.primary
+    : isOnline
     ? colors.success
     : isOffline
     ? colors.error
     : colors.warning;
 
-  const badgeBg = isOnline
+  const badgeBg = isOfflineEngine
+    ? colors.primaryLight
+    : isOnline
     ? colors.successLight
     : isOffline
     ? colors.errorLight
     : colors.warningLight;
 
-  const textColor = isOnline
+  const textColor = isOfflineEngine
+    ? colors.primaryDark
+    : isOnline
     ? colors.successDark
     : isOffline
     ? colors.errorDark
@@ -42,17 +52,25 @@ export function CompactConnection({
     <View
       style={[
         styles.container,
-        {backgroundColor: colors.surface, borderColor: colors.border},
+        {backgroundColor: colors.surface, borderColor: isOfflineEngine ? colors.primary : colors.border},
       ]}>
       <View style={styles.left}>
         <View style={[styles.badge, {backgroundColor: badgeBg}]}>
           <View style={[styles.dot, {backgroundColor: dotColor}]} />
           <Text style={[styles.badgeText, {color: textColor}]}>
-            {isOnline ? 'Connected' : isOffline ? 'Offline' : 'Checking…'}
+            {isOfflineEngine
+              ? '⚡ Offline Mode'
+              : isOnline
+              ? 'Connected'
+              : isOffline
+              ? 'Server Offline'
+              : 'Checking…'}
           </Text>
         </View>
         <Text style={[styles.statusSub, {color: colors.textMuted}]}>
-          {isOnline
+          {isOfflineEngine
+            ? '100% On-Device Engine (Zero Server)'
+            : isOnline
             ? 'VaaniSetu server ready'
             : isOffline
             ? 'Server unreachable'
@@ -61,6 +79,14 @@ export function CompactConnection({
       </View>
 
       <View style={styles.right}>
+        {isOffline && onSwitchToOffline && (
+          <Pressable
+            style={[styles.retryBtn, {backgroundColor: colors.primaryLight, borderColor: colors.primary}]}
+            onPress={onSwitchToOffline}>
+            <Text style={[styles.retryText, {color: colors.primaryDark}]}>⚡ Use Offline</Text>
+          </Pressable>
+        )}
+
         {isOffline && (
           <Pressable
             style={[styles.retryBtn, {backgroundColor: colors.errorLight, borderColor: colors.error}]}

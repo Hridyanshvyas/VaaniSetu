@@ -1,4 +1,5 @@
-import {getBackendWsUrl} from '../config';
+import {getBackendWsUrl, isOfflineHost} from '../config';
+import {sharedOfflinePipeline} from '../offline/offlinePipeline';
 
 export type ExchangeMetadata = {
   type: 'exchange';
@@ -33,17 +34,36 @@ export class VaaniSetuSocket {
   private socket?: WebSocket;
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private manuallyClosed = false;
+  private isOffline = false;
 
   constructor(
     private readonly callId: string,
     private readonly userId: string,
     private readonly language: string,
     private readonly handlers: Handlers,
-  ) {}
+  ) {
+    this.isOffline = isOfflineHost() || callId.includes('offline');
+  }
+
+  get isOfflineMode(): boolean {
+    return this.isOffline;
+  }
 
   connect() {
     this.manuallyClosed = false;
     const wsBaseUrl = getBackendWsUrl();
+
+    if (this.isOffline || wsBaseUrl === 'offline') {
+      this.isOffline = true;
+      setTimeout(() => {
+        if (!this.manuallyClosed) {
+          this.handlers.onConnection(true);
+          this.handlers.onPaired(true);
+        }
+      }, 150);
+      return;
+    }
+
     const lang = encodeURIComponent(this.language || 'hi');
     const url = `${wsBaseUrl}/ws/${encodeURIComponent(this.callId)}/${encodeURIComponent(this.userId)}?language=${lang}`;
     this.socket = new WebSocket(url);
@@ -101,7 +121,33 @@ export class VaaniSetuSocket {
     };
   }
 
+  async sendOfflineExchange(text: string, targetLanguage?: string) {
+    const target = targetLanguage || this.language || 'hi';
+    const exchange = await sharedOfflinePipeline.processExchange(
+      text,
+      this.language,
+      target,
+    );
+
+    this.handlers.onExchange({
+      type: 'exchange',
+      bits_used: exchange.bits_used,
+      lost: exchange.lost,
+      language: exchange.language,
+      confidence: exchange.confidence,
+      transcribed_text: exchange.transcribed_text,
+      translated_text: exchange.translated_text,
+      audio_lost: exchange.lost,
+    });
+  }
+
   sendAudio(audio: string | ArrayBuffer) {
+    if (this.isOffline) {
+      // In offline audio mode, run simulated emergency exchange
+      void this.sendOfflineExchange('Emergency medical assistance required at location.', this.language);
+      return;
+    }
+
     if (this.socket?.readyState !== WebSocket.OPEN) {
       throw new Error('Call is not connected yet.');
     }
