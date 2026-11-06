@@ -348,8 +348,49 @@ class OfflineSpeechModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
+    @ReactMethod
+    fun startOfflineHost(port: Int, promise: Promise) {
+        try {
+            val actualPort = if (port > 0) port else 8080
+            OfflineCallServer.start(actualPort)
+            val ip = OfflineCallServer.getLocalIp()
+            promise.resolve(mapOf(
+                "running" to true,
+                "port" to actualPort,
+                "ip" to ip,
+                "hostAddress" to "$ip:$actualPort"
+            ))
+        } catch (e: Exception) {
+            promise.reject("HOST_START_FAILED", e.localizedMessage, e)
+        }
+    }
+
+    @ReactMethod
+    fun stopOfflineHost(promise: Promise) {
+        try {
+            OfflineCallServer.stop()
+            promise.resolve(true)
+        } catch (e: Exception) {
+            promise.resolve(false)
+        }
+    }
+
+    @ReactMethod
+    fun getOfflineHostInfo(promise: Promise) {
+        val isRunning = OfflineCallServer.isRunning()
+        val ip = OfflineCallServer.getLocalIp()
+        val port = OfflineCallServer.port
+        promise.resolve(mapOf(
+            "running" to isRunning,
+            "ip" to ip,
+            "port" to port,
+            "hostAddress" to "$ip:$port"
+        ))
+    }
+
     override fun invalidate() {
         super.invalidate()
+        OfflineCallServer.stop()
         mainHandler.post {
             try {
                 tts?.stop()

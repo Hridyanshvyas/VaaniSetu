@@ -4,107 +4,168 @@ import {useTheme, typography, spacing, borderRadius} from '../theme/theme';
 
 type Props = {
   status: 'checking' | 'online' | 'offline';
+  serverHost?: string;
   onRetry: () => void;
   isRetrying: boolean;
   onOpenAdvanced: () => void;
-  isOfflineEngine?: boolean;
-  onSwitchToOffline?: () => void;
+  onSelectPreset: (host: string) => void;
 };
 
 export function CompactConnection({
   status,
+  serverHost = 'host:8080',
   onRetry,
   isRetrying,
   onOpenAdvanced,
-  isOfflineEngine = false,
-  onSwitchToOffline,
+  onSelectPreset,
 }: Props) {
   const {colors} = useTheme();
 
-  const isOnline = status === 'online';
-  const isOffline = status === 'offline';
+  const isHost = serverHost.startsWith('host');
+  const isJoin = serverHost.includes('43.1') || serverHost.includes(':8080') && !isHost;
+  const isSolo = serverHost === 'offline';
+  const isOnline = status === 'online' || isHost || isSolo;
+  const isOffline = status === 'offline' && !isHost && !isSolo;
 
-  const dotColor = isOfflineEngine
+  const dotColor = isHost
     ? colors.primary
+    : isJoin
+    ? colors.success
+    : isSolo
+    ? colors.warning
     : isOnline
     ? colors.success
     : isOffline
     ? colors.error
     : colors.warning;
 
-  const badgeBg = isOfflineEngine
+  const badgeBg = isHost
     ? colors.primaryLight
+    : isJoin
+    ? colors.successLight
+    : isSolo
+    ? colors.warningLight
     : isOnline
     ? colors.successLight
-    : isOffline
-    ? colors.errorLight
-    : colors.warningLight;
+    : colors.errorLight;
 
-  const textColor = isOfflineEngine
+  const textColor = isHost
     ? colors.primaryDark
+    : isJoin
+    ? colors.successDark
+    : isSolo
+    ? colors.warningDark
     : isOnline
     ? colors.successDark
-    : isOffline
-    ? colors.errorDark
-    : colors.warningDark;
+    : colors.errorDark;
+
+  const titleText = isHost
+    ? '⚡ Offline Host (This Phone)'
+    : isJoin
+    ? '📲 Offline Client (Hotspot)'
+    : isSolo
+    ? '🎧 Solo Loopback Demo'
+    : isOnline
+    ? 'Server Online'
+    : 'Server Offline';
+
+  const subtitleText = isHost
+    ? 'Turn on Mobile Hotspot · Partner connects to you'
+    : isJoin
+    ? 'Connect to Partner Phone’s Wi-Fi Hotspot'
+    : isSolo
+    ? '100% on-device single phone test'
+    : isOnline
+    ? 'VaaniSetu server connected'
+    : 'Tap to configure connection';
 
   return (
     <View
       style={[
         styles.container,
-        {backgroundColor: colors.surface, borderColor: isOfflineEngine ? colors.primary : colors.border},
+        {
+          backgroundColor: colors.surface,
+          borderColor: isHost ? colors.primary : colors.border,
+        },
       ]}>
-      <View style={styles.left}>
-        <View style={[styles.badge, {backgroundColor: badgeBg}]}>
-          <View style={[styles.dot, {backgroundColor: dotColor}]} />
-          <Text style={[styles.badgeText, {color: textColor}]}>
-            {isOfflineEngine
-              ? '⚡ Offline Mode'
-              : isOnline
-              ? 'Connected'
-              : isOffline
-              ? 'Server Offline'
-              : 'Checking…'}
+      <View style={styles.topRow}>
+        <View style={styles.left}>
+          <View style={[styles.badge, {backgroundColor: badgeBg}]}>
+            <View style={[styles.dot, {backgroundColor: dotColor}]} />
+            <Text style={[styles.badgeText, {color: textColor}]}>{titleText}</Text>
+          </View>
+          <Text style={[styles.statusSub, {color: colors.textMuted}]}>
+            {subtitleText}
           </Text>
         </View>
-        <Text style={[styles.statusSub, {color: colors.textMuted}]}>
-          {isOfflineEngine
-            ? '100% On-Device Engine (Zero Server)'
-            : isOnline
-            ? 'VaaniSetu server ready'
-            : isOffline
-            ? 'Server unreachable'
-            : 'Connecting to server…'}
-        </Text>
+
+        <View style={styles.right}>
+          {isRetrying ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Pressable
+              style={[styles.configBtn, {backgroundColor: colors.surfaceSubtle, borderColor: colors.border}]}
+              onPress={onOpenAdvanced}>
+              <Text style={[styles.configBtnText, {color: colors.textSecondary}]}>⚙️ Edit</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
-      <View style={styles.right}>
-        {isOffline && onSwitchToOffline && (
-          <Pressable
-            style={[styles.retryBtn, {backgroundColor: colors.primaryLight, borderColor: colors.primary}]}
-            onPress={onSwitchToOffline}>
-            <Text style={[styles.retryText, {color: colors.primaryDark}]}>⚡ Use Offline</Text>
-          </Pressable>
-        )}
-
-        {isOffline && (
-          <Pressable
-            style={[styles.retryBtn, {backgroundColor: colors.errorLight, borderColor: colors.error}]}
-            onPress={onRetry}
-            disabled={isRetrying}>
-            {isRetrying ? (
-              <ActivityIndicator size="small" color={colors.errorDark} />
-            ) : (
-              <Text style={[styles.retryText, {color: colors.errorDark}]}>Retry</Text>
-            )}
-          </Pressable>
-        )}
+      {/* 3 Quick Mode Switcher Pills */}
+      <View style={styles.modeRow}>
+        <Pressable
+          style={[
+            styles.modeChip,
+            {
+              backgroundColor: isHost ? colors.primary : colors.surfaceSubtle,
+              borderColor: isHost ? colors.primary : colors.border,
+            },
+          ]}
+          onPress={() => onSelectPreset('host:8080')}>
+          <Text
+            style={[
+              styles.modeChipText,
+              {color: isHost ? colors.white : colors.textPrimary},
+            ]}>
+            ⚡ Host Call
+          </Text>
+        </Pressable>
 
         <Pressable
-          style={[styles.settingsBtn, {backgroundColor: colors.surfaceSubtle, borderColor: colors.border}]}
-          onPress={onOpenAdvanced}
-          accessibilityLabel="Advanced Settings">
-          <Text style={[styles.settingsText, {color: colors.textSecondary}]}>⚙ Settings</Text>
+          style={[
+            styles.modeChip,
+            {
+              backgroundColor: isJoin ? colors.success : colors.surfaceSubtle,
+              borderColor: isJoin ? colors.success : colors.border,
+            },
+          ]}
+          onPress={() => onSelectPreset('192.168.43.1:8080')}>
+          <Text
+            style={[
+              styles.modeChipText,
+              {color: isJoin ? colors.white : colors.textPrimary},
+            ]}>
+            📲 Join Partner
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[
+            styles.modeChip,
+            {
+              backgroundColor: isSolo ? colors.primary : colors.surfaceSubtle,
+              borderColor: isSolo ? colors.primary : colors.border,
+            },
+          ]}
+          onPress={() => onSelectPreset('offline')}>
+          <Text
+            style={[
+              styles.modeChipText,
+              {color: isSolo ? colors.white : colors.textPrimary},
+            ]}>
+            🎧 Solo Demo
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -113,63 +174,75 @@ export function CompactConnection({
 
 const styles = StyleSheet.create({
   container: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.sm,
+    borderWidth: 1.5,
+    gap: spacing.xs,
+  },
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1.5,
   },
   left: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    flex: 1,
+    gap: 2,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
+    gap: 6,
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: borderRadius.pill,
-    gap: 5,
+    borderRadius: borderRadius.full,
+    alignSelf: 'flex-start',
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   badgeText: {
-    fontSize: 10,
-    fontWeight: typography.fontWeights.bold,
+    fontSize: 11,
+    fontWeight: '700',
   },
   statusSub: {
-    fontSize: typography.fontSizes.xs,
-    fontWeight: typography.fontWeights.medium,
+    fontSize: 11,
+    marginTop: 2,
   },
   right: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
   },
-  retryBtn: {
+  configBtn: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
   },
-  retryText: {
-    fontSize: 10,
-    fontWeight: typography.fontWeights.bold,
+  configBtnText: {
+    fontSize: typography.fontSizes.xs,
+    fontWeight: typography.fontWeights.medium,
   },
-  settingsBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.sm,
+  modeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 2,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+  },
+  modeChip: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  settingsText: {
-    fontSize: 10,
-    fontWeight: typography.fontWeights.semiBold,
+  modeChipText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

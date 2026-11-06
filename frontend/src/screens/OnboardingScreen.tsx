@@ -194,11 +194,11 @@ export function OnboardingScreen({onRegistered}: Props) {
         {/* 2. Ultra-Compact Connection Status */}
         <CompactConnection
           status={serverStatus}
+          serverHost={serverHost}
           onRetry={() => void pingServer(serverHost)}
           isRetrying={checkingPing}
           onOpenAdvanced={scrollToSettings}
-          isOfflineEngine={serverHost === 'offline'}
-          onSwitchToOffline={() => void handleSelectPreset('offline')}
+          onSelectPreset={handleSelectPreset}
         />
 
         {/* 3. HERO SECTION — Start Voice Bridge */}

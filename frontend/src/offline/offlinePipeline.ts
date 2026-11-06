@@ -61,6 +61,7 @@ export class OfflinePipeline {
     sourceLanguage: string,
     targetLanguage: string,
     confidence: number = 0.95,
+    speakOutput: boolean = true,
   ): Promise<OfflineExchangeResult> {
     const cleanInput = inputText.trim();
     if (!cleanInput) {
@@ -118,7 +119,9 @@ export class OfflinePipeline {
       const recoveredText = decompressText(unpacked.payload);
 
       // 8. On-Device Native TTS Output
-      void speakOffline(recoveredText, unpacked.languageTag);
+      if (speakOutput) {
+        void speakOffline(recoveredText, unpacked.languageTag);
+      }
 
       return {
         type: 'exchange',

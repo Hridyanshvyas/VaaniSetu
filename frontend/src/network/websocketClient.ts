@@ -122,14 +122,17 @@ export class VaaniSetuSocket {
   }
 
   async sendOfflineExchange(text: string, targetLanguage?: string) {
-    const target = targetLanguage || this.language || 'hi';
+    const target = targetLanguage || (this.language === 'hi' ? 'ta' : 'hi');
+    const shouldSpeakLocally = this.isOffline;
     const exchange = await sharedOfflinePipeline.processExchange(
       text,
       this.language,
       target,
+      0.95,
+      shouldSpeakLocally,
     );
 
-    this.handlers.onExchange({
+    const metadata: ExchangeMetadata = {
       type: 'exchange',
       bits_used: exchange.bits_used,
       lost: exchange.lost,
@@ -138,7 +141,18 @@ export class VaaniSetuSocket {
       transcribed_text: exchange.transcribed_text,
       translated_text: exchange.translated_text,
       audio_lost: exchange.lost,
-    });
+    };
+
+    this.handlers.onExchange(metadata);
+
+    // If connected to a partner phone over the offline host or local network, relay the exchange
+    if (!this.isOffline && this.socket?.readyState === WebSocket.OPEN) {
+      try {
+        this.socket.send(JSON.stringify(metadata));
+      } catch (err) {
+        console.warn('Could not relay exchange to partner device:', err);
+      }
+    }
   }
 
   sendAudio(audio: string | ArrayBuffer) {

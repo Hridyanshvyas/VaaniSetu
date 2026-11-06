@@ -123,13 +123,16 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
             )}%)`,
           );
 
-          if (socket.current?.isOfflineMode) {
-            setPlaying(true);
-            setTimeout(() => {
-              setPlaying(false);
-              setStatus('⚡ Ready · Hold PTT to speak');
-            }, 2200);
+          // Play received speech via native on-device TTS on the receiver phone
+          if (!socket.current?.isOfflineMode && exchange.translated_text) {
+            void speakOffline(exchange.translated_text, exchange.language);
           }
+
+          setPlaying(true);
+          setTimeout(() => {
+            setPlaying(false);
+            setStatus('⚡ Ready · Hold PTT to speak');
+          }, 2200);
         }
       },
       onAudio: async audio => {

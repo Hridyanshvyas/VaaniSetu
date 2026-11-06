@@ -1,4 +1,5 @@
-import {getBackendHttpUrl} from '../config';
+import {getBackendHttpUrl, isEmbeddedHost} from '../config';
+import {startOfflineHost} from '../offline/offlineHost';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type SessionRegistration = {
@@ -14,6 +15,14 @@ export async function registerSession({
   callId,
   nativeLanguage,
 }: SessionRegistration): Promise<{paired: boolean}> {
+  if (isEmbeddedHost()) {
+    try {
+      await startOfflineHost(8080);
+    } catch (e) {
+      console.warn('Embedded host auto-start:', e);
+    }
+  }
+
   const httpUrl = getBackendHttpUrl();
   if (httpUrl === 'offline') {
     await AsyncStorage.setItem(
