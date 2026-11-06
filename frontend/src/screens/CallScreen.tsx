@@ -28,6 +28,13 @@ type Props = {
   onLogout: () => void;
 };
 
+const TARGET_LANG_OPTIONS = [
+  {code: 'hi', label: 'Hindi'},
+  {code: 'ta', label: 'Tamil'},
+  {code: 'te', label: 'Telugu'},
+  {code: 'en', label: 'English'},
+] as const;
+
 export function CallScreen({userId, callId, language, onLogout}: Props) {
   const {colors} = useTheme();
   const isSolo = callId.startsWith('solo');
@@ -40,6 +47,9 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
   const [status, setStatus] = useState('Connecting to backend…');
   const [fatalError, setFatalError] = useState<string | null>(null);
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
+  const [targetLanguage, setTargetLanguage] = useState<string>(
+    language === 'hi' ? 'ta' : 'hi',
+  );
   const socket = useRef<VaaniSetuSocket | undefined>(undefined);
 
   const pairedRef = useRef(isSolo);
@@ -117,8 +127,8 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
             setPlaying(true);
             setTimeout(() => {
               setPlaying(false);
-              setStatus('⚡ Ready · Hold to speak');
-            }, 2000);
+              setStatus('⚡ Ready · Hold PTT to speak');
+            }, 2200);
           }
         }
       },
@@ -163,16 +173,18 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
       return;
     }
     setRecording(true);
-    setStatus('🎙️ Recording speech…');
+    setStatus(
+      socket.current?.isOfflineMode
+        ? `🎙️ Listening… Speak in ${language.toUpperCase()}`
+        : '🎙️ Recording speech…',
+    );
+
     try {
       if (socket.current?.isOfflineMode) {
-        try {
-          await startOfflineSTT(language);
-        } catch {
-          // Native STT optional fallback
-        }
+        await startOfflineSTT(language);
+      } else {
+        await startPushToTalk();
       }
-      await startPushToTalk();
     } catch (error) {
       setRecording(false);
       setStatus(isReadyToSpeak ? 'Ready · Hold to speak' : 'Waiting for partner…');
@@ -189,25 +201,34 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
     if (!recording) return;
     setRecording(false);
     setProcessing(true);
-    setStatus('⚡ Compressing & Transmitting over low-bitrate link…');
 
     if (socket.current?.isOfflineMode) {
+      setStatus('⚡ Transcribing spoken voice…');
+      let spokenText = '';
       try {
-        await stopPushToTalk();
-      } catch {}
-
-      const prompt = OFFLINE_TACTICAL_PROMPTS[0];
-      const textToSend = (prompt as any)[language] || prompt.en;
-      try {
-        await socket.current?.sendOfflineExchange(textToSend, language);
+        const res = await stopOfflineSTT();
+        spokenText = (res.text || '').trim();
       } catch (err: any) {
-        setStatus(`Error: ${err?.message || 'Transmission failed'}`);
-      } finally {
+        console.warn('Offline STT error:', err);
+      }
+
+      if (spokenText) {
+        setStatus(`⚡ Transmitting: "${spokenText}"…`);
+        try {
+          await socket.current?.sendOfflineExchange(spokenText, targetLanguage);
+        } catch (err: any) {
+          setStatus(`Error: ${err?.message || 'Transmission failed'}`);
+        } finally {
+          setProcessing(false);
+        }
+      } else {
         setProcessing(false);
+        setStatus('ℹ️ No speech heard · Hold PTT & speak clearly, or tap a tactical phrase');
       }
       return;
     }
 
+    setStatus('⚡ Compressing & Transmitting over low-bitrate link…');
     try {
       const fileUri = await stopPushToTalk();
       const bytes = await recordedFileToBytes(fileUri);
@@ -229,7 +250,7 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
     setStatus(`⚡ Transmitting: "${prompt.label}"…`);
 
     try {
-      await socket.current?.sendOfflineExchange(textToSend, language);
+      await socket.current?.sendOfflineExchange(textToSend, targetLanguage);
     } catch (err: any) {
       setStatus(`Error: ${err?.message || 'Transmission failed'}`);
     } finally {
@@ -293,10 +314,42 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
         isReadyToSpeak={isReadyToSpeak}
       />
 
-      {/* 4. Tactical Emergency Phrases Quick Bar */}
+      {/* 4. Target Voice Selector (for translation voice output) */}
+      <View style={styles.targetLangBar}>
+        <Text style={[styles.targetLangLabel, {color: colors.textMuted}]}>
+          TRANSLATE TO VOICE:
+        </Text>
+        <View style={styles.targetLangPills}>
+          {TARGET_LANG_OPTIONS.map(opt => {
+            const isSelected = targetLanguage === opt.code;
+            return (
+              <Pressable
+                key={opt.code}
+                onPress={() => setTargetLanguage(opt.code)}
+                style={[
+                  styles.targetLangPill,
+                  {
+                    backgroundColor: isSelected ? colors.primary : colors.surfaceSubtle,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                  },
+                ]}>
+                <Text
+                  style={[
+                    styles.targetLangPillText,
+                    {color: isSelected ? colors.white : colors.textSecondary},
+                  ]}>
+                  {opt.label} ({opt.code.toUpperCase()})
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* 5. Tactical Emergency Phrases Quick Bar */}
       <View style={styles.tacticalContainer}>
         <Text style={[styles.tacticalTitle, {color: colors.textMuted}]}>
-          ⚡ TACTICAL PHRASES (100% OFFLINE TRANSMIT):
+          ⚡ TACTICAL PHRASES (1-TAP OFFLINE TRANSMIT):
         </Text>
         <ScrollView
           horizontal
@@ -313,14 +366,14 @@ export function CallScreen({userId, callId, language, onLogout}: Props) {
         </ScrollView>
       </View>
 
-      {/* 5. Collapsible Network & AI Technical Details */}
+      {/* 6. Collapsible Network & AI Technical Details */}
       <CallDetailsModal
         bitsUsed={bitsUsed}
         exchangesCount={messages.length}
         savingsPct={savingsPct}
       />
 
-      {/* 6. Circular Push-to-Talk Action Button */}
+      {/* 7. Circular Push-to-Talk Action Button */}
       <PushToTalkControl
         recording={recording}
         processing={processing}
@@ -372,34 +425,56 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   fatalBtnText: {
-    color: '#FFFFFF',
-    fontSize: typography.fontSizes.base,
+    color: '#ffffff',
     fontWeight: typography.fontWeights.bold,
+    fontSize: typography.fontSizes.md,
+  },
+  targetLangBar: {
+    gap: 4,
+    marginVertical: 2,
+  },
+  targetLangLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  targetLangPills: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  targetLangPill: {
+    flex: 1,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  targetLangPillText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   tacticalContainer: {
-    paddingVertical: spacing.xs,
     gap: 4,
+    marginBottom: 4,
   },
   tacticalTitle: {
     fontSize: 10,
-    fontWeight: typography.fontWeights.bold,
+    fontWeight: '700',
     letterSpacing: 0.5,
-    paddingHorizontal: spacing.xs,
   },
   tacticalScroll: {
-    flexDirection: 'row',
     gap: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    alignItems: 'center',
+    paddingVertical: 2,
   },
   tacticalChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: borderRadius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: borderRadius.full,
     borderWidth: 1,
   },
   tacticalChipText: {
     fontSize: typography.fontSizes.xs,
-    fontWeight: typography.fontWeights.semiBold,
+    fontWeight: typography.fontWeights.medium,
   },
 });

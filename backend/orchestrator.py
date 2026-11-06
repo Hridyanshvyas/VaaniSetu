@@ -70,9 +70,7 @@ async def handle_exchange(
         translated_text = await _post_translation(
             client, text, source_lang=language_tag, target_lang=target_language
         )
-        return await anyio.to_thread.run_sync(
-            _channel_exchange, translated_text, target_language, link
-        )
+        return _channel_exchange(translated_text, target_language, link)
     finally:
         if owns_client:
             await client.aclose()
@@ -210,9 +208,7 @@ async def handle_audio_exchange(
             target_lang=target_language,
         )
 
-        exchange = await anyio.to_thread.run_sync(
-            _channel_exchange, translated_text, target_language, active_link
-        )
+        exchange = _channel_exchange(translated_text, target_language, active_link)
         exchange["transcribed_text"] = transcription["text"]
         exchange["translated_text"] = translated_text
         exchange["confidence"] = transcription["confidence"]

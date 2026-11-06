@@ -12,6 +12,8 @@ export interface OfflineSTTResult {
   text: string;
   confidence: number;
   language: string;
+  status?: string;
+  error?: string;
 }
 
 export async function isOfflineSpeechSupported(): Promise<{
@@ -36,7 +38,7 @@ export async function speakOffline(text: string, language: string = 'hi'): Promi
       await OfflineSpeechModule.speak(text.trim(), language);
       return true;
     } catch (e) {
-      console.warn('Native Android TTS error, fallback to audio:', e);
+      console.warn('Native Android TTS error:', e);
       return false;
     }
   }
@@ -53,28 +55,45 @@ export async function stopSpeakingOffline(): Promise<void> {
   }
 }
 
-export async function startOfflineSTT(language: string = 'hi'): Promise<OfflineSTTResult> {
+export async function startOfflineSTT(language: string = 'hi'): Promise<boolean> {
   if (Platform.OS === 'android' && OfflineSpeechModule?.startListening) {
     try {
-      const result = await OfflineSpeechModule.startListening(language);
-      return {
-        text: (result.text || '').trim(),
-        confidence: typeof result.confidence === 'number' ? result.confidence : 0.94,
-        language: result.language || language,
-      };
+      await OfflineSpeechModule.startListening(language);
+      return true;
     } catch (e: any) {
-      throw new Error(e?.message || 'Offline speech recognition failed.');
+      console.warn('Offline speech recognition start failed:', e);
+      return false;
     }
   }
-  throw new Error('Offline STT is only supported on Android with SpeechRecognizer.');
+  return false;
 }
 
-export async function stopOfflineSTT(): Promise<void> {
+export async function stopOfflineSTT(): Promise<OfflineSTTResult> {
   if (Platform.OS === 'android' && OfflineSpeechModule?.stopListening) {
     try {
-      await OfflineSpeechModule.stopListening();
-    } catch {
-      // Ignore cleanup error
+      const result = await OfflineSpeechModule.stopListening();
+      return {
+        text: (result?.text || '').trim(),
+        confidence: typeof result?.confidence === 'number' ? result.confidence : 0.92,
+        language: result?.language || 'hi',
+        status: result?.status,
+        error: result?.error,
+      };
+    } catch (e: any) {
+      return {
+        text: '',
+        confidence: 0,
+        language: 'hi',
+        status: 'error',
+        error: e?.message || 'Offline speech recognition stop failed.',
+      };
     }
   }
+  return {
+    text: '',
+    confidence: 0,
+    language: 'hi',
+    status: 'unavailable',
+    error: 'Offline STT requires Android SpeechRecognizer.',
+  };
 }

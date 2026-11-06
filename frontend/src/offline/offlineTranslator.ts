@@ -13,7 +13,7 @@ export interface TranslatedResult {
 }
 
 // 1. Core Tactical & Emergency Exact Phrases
-const PHRASE_DATABASE: Record<string, Record<string, string>> = {
+export const PHRASE_DATABASE: Record<string, Record<string, string>> = {
   emergency_help: {
     en: 'Emergency medical help needed immediately.',
     hi: 'तुरंत आपातकालीन चिकित्सा सहायता की आवश्यकता है।',
@@ -30,7 +30,7 @@ const PHRASE_DATABASE: Record<string, Record<string, string>> = {
     en: 'Water levels are rising rapidly.',
     hi: 'बाढ़ का पानी तेज़ी से बढ़ रहा है।',
     ta: 'வெள்ள நீர் மட்டம் வேகமாக உயர்ந்து வருகிறது.',
-    te: 'వరద నీటి మట్టం వేగంగా పెరుగుతోంది.',
+    te: 'వరద నీటి மட்டம் వేగంగా పెరుగుతోంది.',
   },
   bridge_collapsed: {
     en: 'Bridge has collapsed, route is blocked.',
@@ -86,10 +86,58 @@ const PHRASE_DATABASE: Record<string, Record<string, string>> = {
     ta: 'மீட்புப் பணி வெற்றிகரமாக முடிந்தது.',
     te: 'రెస్క్యూ ఆపరేషన్ విజయవంతంగా పూర్తయింది.',
   },
+  greeting_hello: {
+    en: 'Hello, greetings from base command.',
+    hi: 'नमस्ते, बेस कमांड से अभिवादन।',
+    ta: 'வணக்கம், கட்டுப்பாட்டு மையத்திலிருந்து வாழ்த்துகள்.',
+    te: 'నమస్కారం, బేస్ కమాండ్ నుండి శుభాకాంక్షలు.',
+  },
+  how_are_you: {
+    en: 'How are you doing over there?',
+    hi: 'आप वहाँ कैसे हैं?',
+    ta: 'அங்கே நீங்கள் எப்படி இருக்கிறீர்கள்?',
+    te: 'మీరు అక్కడ ఎలా ఉన్నారు?',
+  },
+  we_are_fine: {
+    en: 'We are safe and holding our position.',
+    hi: 'हम सुरक्षित हैं और अपनी स्थिति बनाए हुए हैं।',
+    ta: 'நாங்கள் பாதுகாப்பாக இருக்கிறோம், எங்கள் நிலையில் உறுதியாக உள்ளோம்.',
+    te: 'మేము సురక్షితంగా ఉన్నాము, మా స్థానంలో స్థిరంగా ఉన్నాము.',
+  },
+  need_doctor: {
+    en: 'Doctor and ambulance needed urgently.',
+    hi: 'डॉक्टर और एम्बुलेंस की तत्काल आवश्यकता है।',
+    ta: 'மருத்துவர் மற்றும் ஆம்புலன்ஸ் அவசரமாக தேவை.',
+    te: 'డాక్టర్ మరియు అంబులెన్స్ అత్యవసరంగా అవసరం.',
+  },
+  come_quickly: {
+    en: 'Please proceed quickly to the rally point.',
+    hi: 'कृपया शीघ्रता से मिलन स्थल पर पहुंचें।',
+    ta: 'தயவுசெய்து விரைவில் சந்திப்பு இடத்திற்கு வாருங்கள்.',
+    te: 'దయచేసి త్వరగా ర్యాలీ పాయింట్‌కు చేరుకోండి.',
+  },
+  danger_area: {
+    en: 'Danger ahead, proceed with caution.',
+    hi: 'आगे ख़तरा है, सावधानी से आगे बढ़ें।',
+    ta: 'முன்னே ஆபத்து, எச்சரிக்கையுடன் செல்லுங்கள்.',
+    te: 'ముందు ప్రమాదం ఉంది, జాగ్రత్తగా వెళ్లండి.',
+  },
+  stand_by: {
+    en: 'Stand by for further instructions.',
+    hi: 'आगे के निर्देशों के लिए प्रतीक्षा करें।',
+    ta: 'அடுத்த கட்ட அறிவுறுத்தல்களுக்காக காத்திருங்கள்.',
+    te: 'తదుపరి సూచనల కోసం వేచి ఉండండి.',
+  },
+  acknowledged: {
+    en: 'Message received and understood.',
+    hi: 'संदेश प्राप्त हुआ और समझ लिया गया।',
+    ta: 'செய்தி பெறப்பட்டு புரிந்துகொள்ளப்பட்டது.',
+    te: 'సందేశం అందింది మరియు అర్థమైంది.',
+  },
 };
 
 // 2. Bilingual Word-Level Token Dictionary
-const DICTIONARY: Record<string, {hi: string; ta: string; te: string; en: string}> = {
+export const DICTIONARY: Record<string, {hi: string; ta: string; te: string; en: string}> = {
   emergency: {en: 'emergency', hi: 'आपातकाल', ta: 'அவசரம்', te: 'అత్యవసరం'},
   help: {en: 'help', hi: 'मदद', ta: 'உதவி', te: 'సహాయం'},
   medical: {en: 'medical', hi: 'चिकित्सा', ta: 'மருத்துவம்', te: 'వైద్యం'},
@@ -99,28 +147,40 @@ const DICTIONARY: Record<string, {hi: string; ta: string; te: string; en: string
   food: {en: 'food', hi: 'भोजन', ta: 'உணவு', te: 'ఆహారం'},
   safe: {en: 'safe', hi: 'सुरक्षित', ta: 'பாதுகாப்பு', te: 'సురక్షితం'},
   danger: {en: 'danger', hi: 'खतरा', ta: 'ஆபத்து', te: 'ప్రమాదం'},
-  flood: {en: 'flood', hi: 'बाढ़', ta: 'வெள்ளம்', te: 'వరద'},
-  fire: {en: 'fire', hi: 'आग', ta: 'தீ', te: 'మంటలు'},
-  road: {en: 'road', hi: 'सड़क', ta: 'சாலை', te: 'రోడ్డు'},
   bridge: {en: 'bridge', hi: 'पुल', ta: 'பாலம்', te: 'వంతెన'},
-  team: {en: 'team', hi: 'टीम', ta: 'குழு', te: 'బృందం'},
-  police: {en: 'police', hi: 'पुलिस', ta: 'காவல்துறை', te: 'పోలీసులు'},
-  army: {en: 'army', hi: 'सेना', ta: 'ராணுவம்', te: 'సైన్యం'},
-  location: {en: 'location', hi: 'स्थान', ta: 'இடம்', te: 'స్థలం'},
-  status: {en: 'status', hi: 'स्थिति', ta: 'நிலை', te: 'స్థితి'},
-  ready: {en: 'ready', hi: 'तैयार', ta: 'தயார்', te: 'సిద్ధం'},
+  road: {en: 'road', hi: 'सड़क', ta: 'சாலை', te: 'రహదారి'},
+  rescue: {en: 'rescue', hi: 'बचाव', ta: 'மீட்பு', te: 'రెస్క్యూ'},
+  team: {en: 'team', hi: 'दल', ta: 'குழு', te: 'బృందం'},
+  location: {en: 'location', hi: 'स्थान', ta: 'இருப்பிடம்', te: 'స్థానం'},
+  radio: {en: 'radio', hi: 'रेडियो', ta: 'வானொலி', te: 'రేడియో'},
+  clear: {en: 'clear', hi: 'स्पष्ट', ta: 'தெளிவு', te: 'స్పష్టం'},
+  boat: {en: 'boat', hi: 'नाव', ta: 'படகு', te: 'పడవ'},
+  helicopter: {en: 'helicopter', hi: 'हेलीकॉप्टर', ta: 'ஹெலிகாப்டர்', te: 'హెలికాప్టర్'},
+  ambulance: {en: 'ambulance', hi: 'एम्बुलेंस', ta: 'ஆம்புலன்ஸ்', te: 'అంబులెన్స్'},
+  flood: {en: 'flood', hi: 'बाढ़', ta: 'வெள்ளம்', te: 'వరద'},
+  rain: {en: 'rain', hi: 'बारिश', ta: 'மழை', te: 'వర్షం'},
+  fire: {en: 'fire', hi: 'आग', ta: 'தீ', te: 'మంటలు'},
   yes: {en: 'yes', hi: 'हाँ', ta: 'ஆம்', te: 'అవును'},
   no: {en: 'no', hi: 'नहीं', ta: 'இல்லை', te: 'కాదు'},
+  ok: {en: 'ok', hi: 'ठीक है', ta: 'சரி', te: 'సరే'},
   now: {en: 'now', hi: 'अभी', ta: 'இப்போது', te: 'ఇప్పుడు'},
-  stop: {en: 'stop', hi: 'रुको', ta: 'நில்', te: 'ఆగండి'},
-  go: {en: 'go', hi: 'जाओ', ta: 'போ', te: 'వెళ్లండి'},
-  come: {en: 'come', hi: 'आओ', ta: 'வா', te: 'రండి'},
+  stop: {en: 'stop', hi: 'रुको', ta: 'நில்லுங்கள்', te: 'ఆగండి'},
+  go: {en: 'go', hi: 'जाओ', ta: 'செல்லுங்கள்', te: 'వెళ్లండి'},
   fast: {en: 'fast', hi: 'जल्दी', ta: 'வேகமாக', te: 'త్వరగా'},
+  slow: {en: 'slow', hi: 'धीरे', ta: 'மெதுவாக', te: 'నెమ్మదిగా'},
   hello: {en: 'hello', hi: 'नमस्ते', ta: 'வணக்கம்', te: 'నమస్కారం'},
-  thanks: {en: 'thank you', hi: 'धन्यवाद', ta: 'நன்றி', te: 'ధన్యవాదాలు'},
+  thanks: {en: 'thanks', hi: 'धन्यवाद', ta: 'நன்றி', te: 'ధన్యవాదాలు'},
+  please: {en: 'please', hi: 'कृपया', ta: 'தயவுசெய்து', te: 'దయచేసి'},
+  people: {en: 'people', hi: 'लोग', ta: 'மக்கள்', te: 'ప్రజలు'},
+  children: {en: 'children', hi: 'बच्चे', ta: 'குழந்தைகள்', te: 'పిల్లలు'},
+  shelter: {en: 'shelter', hi: 'आश्रय', ta: 'தங்குமிடம்', te: 'ఆశ్రయం'},
+  medicine: {en: 'medicine', hi: 'दवा', ta: 'மருந்து', te: 'మందు'},
+  blood: {en: 'blood', hi: 'रक्त', ta: 'இரத்தம்', te: 'రక్తం'},
+  electricity: {en: 'power', hi: 'बिजली', ta: 'மின்சாரம்', te: 'విద్యుత్'},
+  network: {en: 'signal', hi: 'सिग्नल', ta: 'சமிக்ஞை', te: 'సిగ్నల్'},
 };
 
-function normalizeLang(lang: string): 'en' | 'hi' | 'ta' | 'te' {
+function normalizeLangCode(lang: string): 'en' | 'hi' | 'ta' | 'te' {
   const code = (lang || 'hi').trim().toLowerCase().split('-')[0].split('_')[0];
   if (code === 'ta') return 'ta';
   if (code === 'te') return 'te';
@@ -128,15 +188,19 @@ function normalizeLang(lang: string): 'en' | 'hi' | 'ta' | 'te' {
   return 'hi';
 }
 
+/**
+ * Translates input text from source language to target language.
+ */
 export function translateOffline(
   text: string,
-  sourceLangTag: string,
-  targetLangTag: string,
+  sourceLanguage: string = 'hi',
+  targetLanguage: string = 'ta',
 ): string {
-  const src = normalizeLang(sourceLangTag);
-  const tgt = normalizeLang(targetLangTag);
+  const src = normalizeLangCode(sourceLanguage);
+  const tgt = normalizeLangCode(targetLanguage);
 
-  if (src === tgt) {
+  // If languages match, return text as-is
+  if (src === tgt || !text) {
     return text.trim();
   }
 
@@ -153,43 +217,53 @@ export function translateOffline(
     }
     // Also check English phrase keywords
     const enPhrase = phraseEntry.en?.toLowerCase() || '';
-    if (lower.includes(enPhrase) || enPhrase.includes(lower)) {
+    if (lower === enPhrase || lower.includes(enPhrase) || enPhrase.includes(lower)) {
       return phraseEntry[tgt] || cleanText;
     }
   }
 
-  // 2. Keyword heuristic search
+  // 2. Keyword heuristic search for emergency concepts
   for (const phraseEntry of Object.values(PHRASE_DATABASE)) {
     if (
-      (lower.includes('emergency') || lower.includes('आपात') || lower.includes('அவசர') || lower.includes('అత్యవసర')) &&
-      (lower.includes('help') || lower.includes('मदद') || lower.includes('உதவி') || lower.includes('సహాయ'))
+      (lower.includes('emergency') || lower.includes('आपात') || lower.includes('அவசர') || lower.includes('అత్యవసర') || lower.includes('doctor') || lower.includes('डॉक्टर')) &&
+      (lower.includes('help') || lower.includes('मदद') || lower.includes('உதவி') || lower.includes('సహాయ') || lower.includes('need') || lower.includes('चाहिए'))
     ) {
       return PHRASE_DATABASE.emergency_help[tgt];
     }
     if (
-      (lower.includes('rescue') || lower.includes('बचाव') || lower.includes('மீட்பு') || lower.includes('రెస్క్యూ'))
+      lower.includes('rescue') || lower.includes('बचाव') || lower.includes('மீட்பு') || lower.includes('రెస్క్యూ')
     ) {
       return PHRASE_DATABASE.send_rescue[tgt];
     }
     if (
-      (lower.includes('water') || lower.includes('flood') || lower.includes('पानी') || lower.includes('बाढ़') || lower.includes('நீர்') || lower.includes('నీరు'))
+      lower.includes('water') || lower.includes('flood') || lower.includes('पानी') || lower.includes('बाढ़') || lower.includes('நீர்') || lower.includes('నీరు') || lower.includes('వరద')
     ) {
       return PHRASE_DATABASE.water_rising[tgt];
     }
     if (
-      (lower.includes('bridge') || lower.includes('पुल') || lower.includes('பாலம்') || lower.includes('వంతెన'))
+      lower.includes('bridge') || lower.includes('पुल') || lower.includes('பாலம்') || lower.includes('వంతెన')
     ) {
       return PHRASE_DATABASE.bridge_collapsed[tgt];
     }
     if (
-      (lower.includes('safe') || lower.includes('सुरक्षित') || lower.includes('பாதுகாப்பு') || lower.includes('సురక్షితం'))
+      lower.includes('safe') || lower.includes('सुरक्षित') || lower.includes('பாதுகாப்பு') || lower.includes('సురక్షితం')
     ) {
       return PHRASE_DATABASE.all_safe[tgt];
     }
     if (
-      (lower.includes('hear') || lower.includes('radio') || lower.includes('सुन') || lower.includes('கேட்கிறதா') || lower.includes('వినిపిస్తోందా'))
+      lower.includes('hear') || lower.includes('radio') || lower.includes('सुन') || lower.includes('கேட்கிறதா') || lower.includes('వినిపిస్తోందా') || lower.includes('चेक')
     ) {
       return PHRASE_DATABASE.loud_clear[tgt];
+    }
+    if (
+      lower.includes('hello') || lower.includes('नमस्ते') || lower.includes('வணக்கம்') || lower.includes('నమస్కారం') || lower.includes('hi')
+    ) {
+      return PHRASE_DATABASE.greeting_hello[tgt];
+    }
+    if (
+      lower.includes('where') || lower.includes('कहाँ') || lower.includes('status') || lower.includes('స్థితి') || lower.includes('இருப்பிடம்')
+    ) {
+      return PHRASE_DATABASE.what_location[tgt];
     }
   }
 
@@ -199,7 +273,11 @@ export function translateOffline(
   const translatedWords = words.map(word => {
     const w = word.toLowerCase().replace(/[^a-zA-Z\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F]/g, '');
     for (const dictEntry of Object.values(DICTIONARY)) {
-      if (dictEntry[src]?.toLowerCase() === w || dictEntry.en.toLowerCase() === w) {
+      if (
+        dictEntry[src]?.toLowerCase() === w ||
+        dictEntry.en.toLowerCase() === w ||
+        dictEntry.hi.toLowerCase() === w
+      ) {
         matchedCount++;
         return dictEntry[tgt];
       }
@@ -211,7 +289,7 @@ export function translateOffline(
     return translatedWords.join(' ');
   }
 
-  // 4. If no specific dictionary match, return original with standard punctuation
+  // 4. Fallback to cleanText if unknown proper noun or numbers
   return cleanText;
 }
 
@@ -239,7 +317,7 @@ export const OFFLINE_TACTICAL_PROMPTS = [
     en: 'Send rescue team to our coordinates.',
     hi: 'हमारे निर्देशांक पर बचाव दल भेजें।',
     ta: 'எங்கள் இருப்பிடத்திற்கு மீட்புக் குழுவை அனுப்பவும்.',
-    te: 'మా కోఆర్డినేట్లకు రెస్క్యూ బృందం పంపండి.',
+    te: 'మా కోఆర్డినేట్లకు రెస్క్యూ బృందాన్ని పంపండి.',
   },
   {
     id: 'p4',
